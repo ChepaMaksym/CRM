@@ -1,5 +1,7 @@
 ﻿using CRM.DTO.Harvest;
 using CRM.Models;
+using CRM.QueryManagers;
+using CRM.QueryManagers.Tables;
 using CRM.Services.Interface;
 using Microsoft.Data.SqlClient;
 
@@ -14,19 +16,19 @@ namespace CRM.Services
             var harvest = new List<Harvest>();
             using (var connection = new SqlConnection(_connectionString))
             {
-                var command = new SqlCommand("SELECT * FROM Harvest", connection);
+                var command = new SqlCommand(HarvestQueryManager.GetAllHarvests, connection);
                 await connection.OpenAsync();
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     harvest.Add(new Harvest
                     {
-                        HarvestId = (int)reader["harvest_id"],
-                        PlantId = (int)reader["plant_id"],
-                        Date = (DateTime)reader["date"],
-                        QuantityKg = (decimal)reader["quantity_kg"],
-                        AverageWeightPerItem = (decimal)reader["average_weight_per_item"],
-                        NumberItems = (int)reader["number_items"]
+                        HarvestId = (int)reader[HarvestColumns.HarvestId],
+                        PlantId = (int)reader[HarvestColumns.PlantId],
+                        Date = (DateTime)reader[HarvestColumns.Date],
+                        QuantityKg = (decimal)reader[HarvestColumns.QuantityKg],
+                        AverageWeightPerItem = (decimal)reader[HarvestColumns.AverageWeightPerItem],
+                        NumberItems = (int)reader[HarvestColumns.NumberItems]
                     });
                 }
             }
@@ -38,20 +40,20 @@ namespace CRM.Services
             Harvest? harvest = null;
             using (var connection = new SqlConnection(_connectionString))
             {
-                var command = new SqlCommand("SELECT * FROM Harvest WHERE harvest_id = @id", connection);
-                command.Parameters.AddWithValue("@id", id);
+                var command = new SqlCommand(HarvestQueryManager.GetHarvestById, connection);
+                command.Parameters.AddWithValue(HarvestQueryManager.IdWithAt, id);
                 await connection.OpenAsync();
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     harvest = new Harvest
                     {
-                        HarvestId = (int)reader["harvest_id"],
-                        PlantId = (int)reader["plant_id"],
-                        Date = (DateTime)reader["date"],
-                        QuantityKg = (decimal)reader["quantity_kg"],
-                        AverageWeightPerItem = (decimal)reader["average_weight_per_item"],
-                        NumberItems = (int)reader["number_items"]
+                        HarvestId = (int)reader[HarvestColumns.HarvestId],
+                        PlantId = (int)reader[HarvestColumns.PlantId],
+                        Date = (DateTime)reader[HarvestColumns.Date],
+                        QuantityKg = (decimal)reader[HarvestColumns.QuantityKg],
+                        AverageWeightPerItem = (decimal)reader[HarvestColumns.AverageWeightPerItem],
+                        NumberItems = (int)reader[HarvestColumns.NumberItems]
                     };
                 }
             }
@@ -61,16 +63,14 @@ namespace CRM.Services
         public async Task<int> AddAsync(AddHarvestDTO harvest)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand(@"INSERT INTO Harvest (plant_id, date, quantity_kg, average_weight_per_item, number_items)
-                                   VALUES (@plant_id, @date, @quantity_kg, @average_weight_per_item, @number_items)
-                                   SELECT CAST(SCOPE_IDENTITY() AS INT);", connection);
-            command.Parameters.AddWithValue("@plant_id", harvest.PlantId);
-            command.Parameters.AddWithValue("@date", harvest.Date);
-            command.Parameters.AddWithValue("@quantity_kg", harvest.QuantityKg);
-            command.Parameters.AddWithValue("@average_weight_per_item", harvest.AverageWeightPerItem);
-            command.Parameters.AddWithValue("@number_items", harvest.NumberItems);
-
+            var command = new SqlCommand(HarvestQueryManager.InsertHarvest, connection);
+            command.Parameters.AddWithValue(HarvestQueryManager.PlantIdWithAt, harvest.PlantId);
+            command.Parameters.AddWithValue(HarvestQueryManager.DateWithAt, harvest.Date);
+            command.Parameters.AddWithValue(HarvestQueryManager.QuantityKgWithAt, harvest.QuantityKg);
+            command.Parameters.AddWithValue(HarvestQueryManager.AverageWeightPerItemWithAt, harvest.AverageWeightPerItem);
+            command.Parameters.AddWithValue(HarvestQueryManager.NumberItemsWithAt, harvest.NumberItems);
             await connection.OpenAsync();
+
             var result = await command.ExecuteScalarAsync();
             return result is int id ? id : throw new InvalidOperationException("Failed to retrieve the generated ID.");
         }
@@ -78,17 +78,13 @@ namespace CRM.Services
         public async Task UpdateAsync(UpdateHarvestDTO harvest)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand(@"UPDATE Harvest 
-                                   SET plant_id = @plant_id, date = @date, quantity_kg = @quantity_kg, 
-                                       average_weight_per_item = @average_weight_per_item, number_items = @number_items 
-                                   WHERE harvest_id = @id", connection);
-            command.Parameters.AddWithValue("@plant_id", harvest.PlantId);
-            command.Parameters.AddWithValue("@date", harvest.Date);
-            command.Parameters.AddWithValue("@quantity_kg", harvest.QuantityKg);
-            command.Parameters.AddWithValue("@average_weight_per_item", harvest.AverageWeightPerItem);
-            command.Parameters.AddWithValue("@number_items", harvest.NumberItems);
-            command.Parameters.AddWithValue("@id", harvest.HarvestId);
-
+            var command = new SqlCommand(HarvestQueryManager.UpdateHarvest, connection);
+            command.Parameters.AddWithValue(HarvestQueryManager.PlantIdWithAt, harvest.PlantId);
+            command.Parameters.AddWithValue(HarvestQueryManager.DateWithAt, harvest.Date);
+            command.Parameters.AddWithValue(HarvestQueryManager.QuantityKgWithAt, harvest.QuantityKg);
+            command.Parameters.AddWithValue(HarvestQueryManager.AverageWeightPerItemWithAt, harvest.AverageWeightPerItem);
+            command.Parameters.AddWithValue(HarvestQueryManager.NumberItemsWithAt, harvest.NumberItems);
+            command.Parameters.AddWithValue(HarvestQueryManager.IdWithAt, harvest.HarvestId);
             await connection.OpenAsync();
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
@@ -102,8 +98,8 @@ namespace CRM.Services
         public async Task DeleteAsync(int id)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("DELETE FROM Harvest WHERE harvest_id = @id", connection);
-            command.Parameters.AddWithValue("@id", id);
+            var command = new SqlCommand(HarvestQueryManager.DeleteHarvest, connection);
+            command.Parameters.AddWithValue(HarvestQueryManager.IdWithAt, id);
             await connection.OpenAsync();
 
             var rowsAffected = await command.ExecuteNonQueryAsync();

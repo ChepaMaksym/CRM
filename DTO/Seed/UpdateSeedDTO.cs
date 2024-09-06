@@ -8,6 +8,9 @@ namespace CRM.DTO.Seed
         public int SeedId { get; set; }
 
         [Required]
-        public string Name { get; set; }
+        [Range(5, 50, ErrorMessage = "Name length must be between 5 and 50 characters.")]
+        public string Name { get; set; } = string.Empty;
+        [Required]
+        public decimal Cost { get; set; }
     }
 }

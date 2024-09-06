@@ -1,5 +1,7 @@
 ﻿using CRM.DTO.Garden;
 using CRM.Models;
+using CRM.QueryManagers;
+using CRM.QueryManagers.Tables;
 using CRM.Services.Interface;
 using Microsoft.Data.SqlClient;
 
@@ -14,15 +16,15 @@ namespace CRM.Services
             var gardens = new List<Garden>();
             using (var connection = new SqlConnection(_connectionString))
             {
-                var command = new SqlCommand("SELECT * FROM Gardens", connection);
+                var command = new SqlCommand(GardenQueryManager.GetAllGardens, connection);
                 await connection.OpenAsync();
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     gardens.Add(new Garden
                     {
-                        GardenId = (int)reader["garden_id"],
-                        Size = (decimal)reader["size"]
+                        GardenId = (int)reader[GardenColumns.GardenId],
+                        Size = (decimal)reader[GardenColumns.Size]
                     });
                 }
             }
@@ -34,16 +36,16 @@ namespace CRM.Services
             Garden? garden = null;
             using (var connection = new SqlConnection(_connectionString))
             {
-                var command = new SqlCommand("SELECT * FROM Gardens WHERE garden_id = @id", connection);
-                command.Parameters.AddWithValue("@id", id);
+                var command = new SqlCommand(GardenQueryManager.GetGardenById, connection);
+                command.Parameters.AddWithValue(GardenQueryManager.IdWithAt, id);
                 await connection.OpenAsync();
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     garden = new Garden
                     {
-                        GardenId = (int)reader["garden_id"],
-                        Size = (decimal)reader["size"]
+                        GardenId = (int)reader[GardenColumns.GardenId],
+                        Size = (decimal)reader[GardenColumns.Size]
                     };
                 }
             }
@@ -53,11 +55,8 @@ namespace CRM.Services
         public async Task<int> AddAsync(AddGardenDTO  garden)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand(@"
-                            INSERT INTO Gardens (size)
-                            VALUES (@size)
-                            SELECT CAST(SCOPE_IDENTITY() AS INT);", connection);
-            command.Parameters.AddWithValue("@size", garden.Size);
+            var command = new SqlCommand(GardenQueryManager.InsertGarden, connection);
+            command.Parameters.AddWithValue(GardenQueryManager.SizeWithAt, garden.Size);
 
             await connection.OpenAsync();
             var result = await command.ExecuteScalarAsync();
@@ -67,9 +66,9 @@ namespace CRM.Services
         public async Task UpdateAsync(UpdateGardenDTO garden)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("UPDATE Gardens SET size = @size WHERE garden_id = @id", connection);
-            command.Parameters.AddWithValue("@size", garden.Size);
-            command.Parameters.AddWithValue("@id", garden.GardenId);
+            var command = new SqlCommand(GardenQueryManager.UpdateGarden, connection);
+            command.Parameters.AddWithValue(GardenQueryManager.SizeWithAt, garden.Size);
+            command.Parameters.AddWithValue(GardenQueryManager.IdWithAt, garden.GardenId);
             await connection.OpenAsync();
             await command.ExecuteNonQueryAsync();
 
@@ -85,8 +84,8 @@ namespace CRM.Services
         public async Task DeleteAsync(int id)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("DELETE FROM Gardens WHERE garden_id = @id", connection);
-            command.Parameters.AddWithValue("@id", id);
+            var command = new SqlCommand(GardenQueryManager.DeleteGarden, connection);
+            command.Parameters.AddWithValue(GardenQueryManager.IdWithAt, id);
             await connection.OpenAsync();
 
             var rowsAffected = await command.ExecuteNonQueryAsync();

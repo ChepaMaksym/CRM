@@ -9,7 +9,7 @@ namespace CRM.DTO.Watering
 
         [Required]
         [DataType(DataType.DateTime)]
-        public DateTime WateringDate { get; set; }
+        public DateTime Date { get; set; }
 
         [Required]
         [Range(0.1, double.MaxValue, ErrorMessage = "Amount must be greater than 0.")]
